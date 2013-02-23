@@ -1,0 +1,138 @@
+#!/usr/bin/env perl
+
+use Modern::Perl;
+use FindBin;
+use Pod::Usage;
+use Date::Manip;
+
+use constant COMMANDS  => [ qw/man help start sub stop reset list flush time/ ];
+use constant TIMESTAMP => "%Y-%m-%d %H:%M:%S.";
+
+my $config = {
+    directory => "$FindBin::Bin/log/",
+    file      => "tasks",
+    default   => "task",
+};
+
+=head1 NAME
+
+  task - Simple task timer
+
+=head1 SYNOPSIS
+
+  task start bug fix           # start a timer
+  task start another bug fix   # stop the first and start a new one
+  task stop                    # stop the second timer
+  task start a third bug fix   # start a third
+  task sub part 1              # start a subtimer without stopping the running timer
+  task stop                    # stop the sub timer
+  task stop                    # stop the third timer
+
+=head1 COMMANDS
+
+=head2 OVERVIEW
+
+The general syntax is
+
+  task [command] [args...]
+
+where command is one of
+
+  start  - start a timer
+  sub    - start a subtimer
+  stop   - stop the current timer
+  reset  - reset a timer
+  list   - list all timers
+  flush  - archive timers and start over
+  time   - list current timer
+
+Specific help for commands are available via
+
+  task help [command]
+
+The full man page is available via
+
+  task man
+
+=cut
+
+{
+    no strict 'refs';
+    my $command = shift @ARGV;
+    $command ~~ COMMANDS ? $command->(@ARGV) : pod2usage( -verbose => 1 );
+}
+
+=head2 man
+
+Get the full man page.
+
+  task man
+
+=cut
+sub man {
+    pod2usage( -verbose => 2 );
+}
+
+=head2 help
+
+Get help for one of the commands.
+
+  task help [command]
+
+=cut
+sub help {
+    my ($command) = @_;
+    pod2usage( -verbose => 99, -sections => "COMMANDS/" . ($command ~~ COMMANDS ? $command : "OVERVIEW") );
+}
+
+=head2 start
+
+Start the timer for a new or existing task.
+
+  task start [task name]
+
+=cut
+sub start {
+    my ($label) = join " ", @_ || DEFAULT_TASK;
+    say "Starting $label";
+    note "start $label";
+}
+
+sub sub {
+
+}
+
+sub stop {
+
+}
+
+sub reset {
+
+}
+
+sub list {
+
+}
+
+sub flush {
+
+}
+
+sub time {
+
+}
+
+# log the string to the log file
+sub note {
+
+}
+
+=head1 DESCRIPTION
+
+This program times and logs tasks using a serries of log files stored in the log directory. 
+
+=head1 AUTHOR
+
+Erik J. Sturcke
+
+=cut
