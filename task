@@ -5,14 +5,9 @@ use FindBin;
 use Pod::Usage;
 use Date::Manip;
 
-use constant COMMANDS  => [ qw/man help start sub stop reset list flush time/ ];
-use constant TIMESTAMP => "%Y-%m-%d %H:%M:%S.";
-
-my $config = {
-    directory => "$FindBin::Bin/log/",
-    file      => "tasks",
-    default   => "task",
-};
+use constant COMMANDS    => [ qw/man help start sub stop reset list flush time/ ];
+use constant CONFIG_KEYS => qw/TIMESTAMP_FORMAT LOG_DIRECTORY LOG_FILE DEFAULT_TASK/;
+use constant CONFIG_LINE => qr/^\s*(.*?)\s*=\s*(.*?)\s*$/;
 
 =head1 NAME
 
@@ -62,6 +57,47 @@ The full man page is available via
     $command ~~ COMMANDS ? $command->(@ARGV) : pod2usage( -verbose => 1 );
 }
 
+# fetch the configuration
+sub config {
+    state $config;
+    return $config if $config;
+
+    # defaults
+    $config = {
+        TIMESTAMP_FORMAT => "%Y-%m-%d %H:%M:%S",
+        LOG_DIRECTORY    => "$FindBin::Bin/log/",
+        LOG_FILE         => "tasks",
+        DEFAULT_TASK     => "task",
+    };
+
+    # update via config files and environment
+    update_config($config, read_config($_)) for ("/etc/task-timer", "$ENV{HOME}/.task-timer", "./.task-timer");
+    update_config($config, %ENV);
+    return $config;
+}
+
+# read config values from the passed file
+# right now we just ignore invalid lines
+sub read_config {
+    my ($file) = @_;
+    return unless -e $file;
+    open my $fh, "<", $file or die "Failed to open configuration file $file: $!";   
+    return map { $_ =~ CONFIG_LINE  } <$fh>;
+}
+
+# update the config hash
+sub update_config {
+    my ($config, %values) = @_;
+    map { $config->{$_} = $values{$_} if defined $values{$_} } CONFIG_KEYS;
+}
+
+# log the string to the log file
+sub note {
+    my $file = config->{LOG_DIRECTORY} . config->{LOG_FILE};
+    open my $log, ">>", $file or die "Failed to open $file: $!";
+    say $log UnixDate("now", config->{TIMESTAMP_FORMAT}) . " " . join(" ", @_);    
+}
+
 =head2 man
 
 Get the full man page.
@@ -93,9 +129,9 @@ Start the timer for a new or existing task.
 
 =cut
 sub start {
-    my ($label) = join " ", @_ || $config->{default};
+    my ($label) = join " ", (@_ || config->{DEFAULT_TASK});
     say "Starting $label";
-    note("start $label");
+    note "start", $label;
 }
 
 sub sub {
@@ -119,11 +155,6 @@ sub flush {
 }
 
 sub time {
-
-}
-
-# log the string to the log file
-sub note {
 
 }
 
