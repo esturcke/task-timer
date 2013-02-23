@@ -93,9 +93,9 @@ Start the timer for a new or existing task.
 
 =cut
 sub start {
-    my ($label) = join " ", @_ || DEFAULT_TASK;
+    my ($label) = join " ", @_ || $config->{default};
     say "Starting $label";
-    note "start $label";
+    note("start $label");
 }
 
 sub sub {
