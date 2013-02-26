@@ -129,7 +129,7 @@ Start the timer for a new or existing task.
 
 =cut
 sub start {
-    my ($label) = join " ", (@_ || config->{DEFAULT_TASK});
+    my ($label) = @_ ? join " ", @_ : config->{DEFAULT_TASK};
     say "Starting $label";
     note "start", $label;
 }
@@ -142,7 +142,7 @@ Start the timer for a sub task.
 
 =cut
 sub sub {
-    my ($label) = join " ", (@_ || config->{DEFAULT_TASK});
+    my ($label) = @_ ? join " ", @_ : config->{DEFAULT_TASK};
     say "Starting subtask $label";
     note "sub", $label;
 }
