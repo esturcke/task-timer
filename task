@@ -134,8 +134,17 @@ sub start {
     note "start", $label;
 }
 
-sub sub {
+=head2 sub
 
+Start the timer for a sub task.
+
+  task sub [sub task name]
+
+=cut
+sub sub {
+    my ($label) = join " ", (@_ || config->{DEFAULT_TASK});
+    say "Starting subtask $label";
+    note "sub", $label;
 }
 
 sub stop {
