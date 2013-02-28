@@ -3,11 +3,13 @@
 use Modern::Perl;
 use FindBin;
 use Pod::Usage;
-use Date::Manip;
+use Date::Parse;
+use Time::Seconds;
 
 use constant COMMANDS    => [ qw/man help start sub stop reset list flush time/ ];
-use constant CONFIG_KEYS => qw/TIMESTAMP_FORMAT LOG_DIRECTORY LOG_FILE DEFAULT_TASK/;
+use constant CONFIG_KEYS => qw/LOG_DIRECTORY LOG_FILE DEFAULT_TASK/;
 use constant CONFIG_LINE => qr/^\s*(.*?)\s*=\s*(.*?)\s*$/;
+use constant LOG_LINE    => qr/^(\w+ \w+ \d+ \d+:\d+:\d+ \d+) (\w+)(?: (.+))?$/;
 
 =head1 NAME
 
@@ -64,9 +66,8 @@ sub config {
 
     # defaults
     $config = {
-        TIMESTAMP_FORMAT => "%Y-%m-%d %H:%M:%S",
         LOG_DIRECTORY    => "$FindBin::Bin/log/",
-        LOG_FILE         => "tasks",
+        LOG_FILE         => "current",
         DEFAULT_TASK     => "task",
     };
 
@@ -91,11 +92,68 @@ sub update_config {
     map { $config->{$_} = $values{$_} if defined $values{$_} } CONFIG_KEYS;
 }
 
+# read the current log
+sub tasks {
+    my $file = config->{LOG_DIRECTORY} . config->{LOG_FILE};
+    open my $log, "<", $file or return {};
+
+    my $tasks   = {};
+    my $running = [];
+
+    my $stop = sub {
+        my ($time) = @_;
+        my $task = pop @$running or return;
+        $task->{time} += $time - $task->{start};
+        delete $task->{start};
+        return $task;
+    };
+
+    my $start = sub {
+        my ($task, $time) = @_;
+        $task->{start} = $time;
+        push @$running, $task;
+    };
+
+    my $new = sub { { label => shift, time => 0, subtasks => {} } };
+
+    while (<$log>) {
+        my ($time, $command, $label) = $_ =~ LOG_LINE or die "Failed to parse $_ [$.]"; 
+        my $epoch = str2time $time;
+        given ($command) {
+            when ("start") {
+                &$stop($epoch) while @$running;
+                &$start($tasks->{$label} ||= &$new($label), $epoch);
+            }
+            when ("sub") {
+                my $task = $running->[-1] or die "No task running to create a sub task for";
+                &$start($task->{subtasks}{$label} ||= &$new($label), $epoch);
+            }
+            when ("stop") {
+                &$stop($epoch);
+            }
+            when ("reset") {
+                $running = [] if @$running && $running->[0]{label} eq $label;
+                delete $tasks->{$label};
+            }
+            default {
+                die "Unknown command $command in logs";
+            }
+        }
+    }
+    return $tasks, $running;
+}
+
 # log the string to the log file
 sub note {
     my $file = config->{LOG_DIRECTORY} . config->{LOG_FILE};
     open my $log, ">>", $file or die "Failed to open $file: $!";
-    say $log UnixDate("now", config->{TIMESTAMP_FORMAT}) . " " . join(" ", @_);    
+    say $log scalar localtime . " " . join(" ", @_);    
+}
+
+# returns pretty format of time
+sub pretty_time {
+    my $time = new Time::Seconds shift @_;
+    return $time->pretty;
 }
 
 =head2 man
@@ -143,28 +201,78 @@ Start the timer for a sub task.
 =cut
 sub sub {
     my ($label) = @_ ? join " ", @_ : config->{DEFAULT_TASK};
+    my ($tasks, $running) = tasks();
+    die "Can't create a subtask when there is no task running" unless @$running;
     say "Starting subtask $label";
     note "sub", $label;
 }
 
+=head2 stop
+
+Stop the timer for the current task or subtask.
+
+  task stop
+
+=cut
 sub stop {
-
+    my ($tasks, $running) = tasks();
+    die "No tasks running to stop" unless @$running;
+    say "Stopping" . (@$running > 1 ? " subtask " : " ") . $running->[-1]{label};
+    note "stop";
 }
 
+=head2 reset
+
+Reset the timer for a task (and removes all subtasks).
+
+  task reset label
+
+=cut
 sub reset {
-
+    my ($label) = @_ or die "No task specified to reset";
+    my ($tasks, $running) = tasks();
+    die "No task called $label" unless $tasks->{label};
+    say "Resetting $label";
+    note "reset $label";
 }
 
+=head2 list
+
+List all the timers.
+
+  task list
+
+=cut
 sub list {
+    my ($tasks, $running) = tasks();
 
+    my $level;
+    $level = sub {
+        my ($tasks, $indent) = @_;
+        for my $label (sort keys %$tasks) {
+            say "$indent$label\t" . pretty_time $tasks->{$label}{time};
+            &$level($tasks->{$label}{subtasks}, $indent . "\t");
+        }
+    };
+
+    &$level($tasks, "");
 }
 
+=head2 flush
+
+Archive the log so we can start a new one.
+
+=cut
 sub flush {
-
+    
+    my $file = config->{LOG_DIRECTORY} . config->{LOG_FILE};
 }
 
-sub time {
+=head2 time
 
+=cut
+sub time {
+    
 }
 
 =head1 DESCRIPTION
