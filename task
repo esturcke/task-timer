@@ -7,7 +7,7 @@ use Date::Parse;
 use Time::Seconds;
 use POSIX qw/strftime/;
 
-use constant COMMANDS    => [ qw/man help start stop pause break reset list flush time/ ];
+use constant COMMANDS    => [ qw/man help start stop pause resume switch break reset current list flush time summary/ ];
 use constant CONFIG_KEYS => qw/LOG_DIRECTORY LOG_FILE SHORT/;
 use constant CONFIG_LINE => qr/^\s*(.*?)\s*=\s*(.*?)\s*$/;
 use constant LOG_LINE    => qr/^(\w+ \w+  ?\d+ \d+:\d+:\d+ \d+) (\w+)(?: (.+))?$/;
