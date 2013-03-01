@@ -7,7 +7,7 @@ use Date::Parse;
 use Time::Seconds;
 use POSIX qw/strftime/;
 
-use constant COMMANDS    => [ qw/man help start stop pause resume switch break reset current list flush time summary/ ];
+use constant COMMANDS    => [ qw/man help start stop pause resume switch break reset current list flush time summary status/ ];
 use constant CONFIG_KEYS => qw/LOG_DIRECTORY LOG_FILE SHORT/;
 use constant CONFIG_LINE => qr/^\s*(.*?)\s*=\s*(.*?)\s*$/;
 use constant LOG_LINE    => qr/^(\w+ \w+  ?\d+ \d+:\d+:\d+ \d+) (\w+)(?: (.+))?$/;
@@ -19,10 +19,10 @@ use constant LOG_LINE    => qr/^(\w+ \w+  ?\d+ \d+:\d+:\d+ \d+) (\w+)(?: (.+))?$
 =head1 SYNOPSIS
 
   task start bug fix           # start a timer
-  task start another bug fix   # stop the first and start a new one
+  task switch another bug fix  # stop the first and start a new one
   task stop                    # stop the second timer
   task start a third bug fix   # start a third
-  task sub part 1              # start a subtimer without stopping the running timer
+  task start part 1            # start a sub-timer without stopping the running timer
   task stop                    # stop the sub timer
   task stop                    # stop the third timer
 
@@ -36,14 +36,20 @@ The general syntax is
 
 where command is one of
 
-  start  - start a timer
-  stop   - stop the current timer
-  pause  - pause all timers (use start with no args to resume)
-
-  reset  - reset a timer
-  list   - list all timers
-  flush  - archive timers and start over
-  time   - list current timer or specified timer
+  start [label]    - start a timer/sub-timer
+  stop             - stop the current timer/sub-timer
+  stop [label]     - stop sub-timers up to and including the labeled timer
+  pause            - pause all timers
+  resume           - resume paused timers
+  switch [label]   - stop current timers and start labeled timer 
+  break            - stop all timers
+  reset [label]    - reset a timer
+  current          - list the currently running timer or sub-timer
+  list             - list all timers
+  flush            - archive timers and start over
+  time             - list the current time
+  status           - list the current task as well as time
+  summary          - list all tasks and times
 
 Specific help for commands are available via
 
