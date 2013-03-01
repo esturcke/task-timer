@@ -5,11 +5,12 @@ use FindBin;
 use Pod::Usage;
 use Date::Parse;
 use Time::Seconds;
+use POSIX qw/strftime/;
 
-use constant COMMANDS    => [ qw/man help start sub stop reset list flush time/ ];
-use constant CONFIG_KEYS => qw/LOG_DIRECTORY LOG_FILE DEFAULT_TASK/;
+use constant COMMANDS    => [ qw/man help start stop pause break reset list flush time/ ];
+use constant CONFIG_KEYS => qw/LOG_DIRECTORY LOG_FILE SHORT/;
 use constant CONFIG_LINE => qr/^\s*(.*?)\s*=\s*(.*?)\s*$/;
-use constant LOG_LINE    => qr/^(\w+ \w+ \d+ \d+:\d+:\d+ \d+) (\w+)(?: (.+))?$/;
+use constant LOG_LINE    => qr/^(\w+ \w+  ?\d+ \d+:\d+:\d+ \d+) (\w+)(?: (.+))?$/;
 
 =head1 NAME
 
@@ -36,12 +37,13 @@ The general syntax is
 where command is one of
 
   start  - start a timer
-  sub    - start a subtimer
   stop   - stop the current timer
+  pause  - pause all timers (use start with no args to resume)
+
   reset  - reset a timer
   list   - list all timers
   flush  - archive timers and start over
-  time   - list current timer
+  time   - list current timer or specified timer
 
 Specific help for commands are available via
 
@@ -203,8 +205,8 @@ sub sub {
     my ($label) = @_ ? join " ", @_ : config->{DEFAULT_TASK};
     my ($tasks, $running) = tasks();
     die "Can't create a subtask when there is no task running" unless @$running;
-    say "Starting subtask $label";
     note "sub", $label;
+    say "Started subtask $label";
 }
 
 =head2 stop
@@ -217,8 +219,8 @@ Stop the timer for the current task or subtask.
 sub stop {
     my ($tasks, $running) = tasks();
     die "No tasks running to stop" unless @$running;
-    say "Stopping" . (@$running > 1 ? " subtask " : " ") . $running->[-1]{label};
     note "stop";
+    say "Stopped" . (@$running > 1 ? " subtask " : " ") . $running->[-1]{label};
 }
 
 =head2 reset
@@ -232,13 +234,13 @@ sub reset {
     my ($label) = @_ or die "No task specified to reset";
     my ($tasks, $running) = tasks();
     die "No task called $label" unless $tasks->{label};
-    say "Resetting $label";
     note "reset $label";
+    say "Reset $label";
 }
 
 =head2 list
 
-List all the timers.
+List all the tasks.
 
   task list
 
@@ -248,10 +250,10 @@ sub list {
 
     my $level;
     $level = sub {
-        my ($tasks, $indent) = @_;
+        my ($tasks, $prefix) = @_;
         for my $label (sort keys %$tasks) {
-            say "$indent$label\t" . pretty_time $tasks->{$label}{time};
-            &$level($tasks->{$label}{subtasks}, $indent . "\t");
+            say "$prefix$label\t" . pretty_time $tasks->{$label}{time};
+            &$level($tasks->{$label}{subtasks}, "$prefix\\$label");
         }
     };
 
@@ -264,20 +266,40 @@ Archive the log so we can start a new one.
 
 =cut
 sub flush {
-    
-    my $file = config->{LOG_DIRECTORY} . config->{LOG_FILE};
+    my $file    = config->{LOG_DIRECTORY} . config->{LOG_FILE};
+    my $archive = config->{LOG_DIRECTORY} . strftime "%Y-%m-%d_%H:%M:%S", localtime;
+    die "No log to flush\n" unless -e $file;
+    `mv $file $archive`;
+    `gzip $archive`;
+    say "Flushed log";
 }
 
 =head2 time
 
 =cut
 sub time {
-    
+    my ($label) = @_;
 }
 
 =head1 DESCRIPTION
 
 This program times and logs tasks using a serries of log files stored in the log directory. 
+
+=head1 CONFIGURATION
+
+Configuration is taken from environment variables, ~/.task-timer, /etc/task-timer, in that order. The following variables can be used:
+
+=head2 LOG_DIRECTORY
+
+The directory to store logs in. The default is C<log/> relative to where the script is.
+
+=head2 LOG_FILE
+
+The file name to use for the log file. The default is C<current>.
+
+=head2 SHORT
+
+Can be set to change the output to be more suitable for use with scripts.
 
 =head1 AUTHOR
 
