@@ -118,10 +118,9 @@ Start the timer for a new or existing task.
 
 =cut
 sub start {
-    my ($label) = @_ or die "No task specified to start";
-    note "start", $label;
+    note "start", shift;
     sync;
-    respond_long "Started " . pretty_task Task::List::running->[0]
+    respond_long "Started " . pretty_task Task::List::last;
 }
 
 =head2 stop
@@ -132,12 +131,9 @@ Stop the timer for the current task or subtask.
 
 =cut
 sub stop {
-    sync;
-    die "No tasks running to stop" unless @{&Task::List::running};
     note "stop";
-    my $task = Task::List::running->[0];
-    Task::List::add(undef, "stop");
-    respond_long "Stopped " . pretty_task $task;
+    sync;
+    respond_long "Stopped " . pretty_task Task::List::last;
 }
 
 =head2 push
@@ -148,10 +144,23 @@ Pushes a sub-task onto the task stack.
 
 =cut
 sub push {
-    my $label = shift or die "No task specified to push";
-    note "push", $label;
+    note "push", shift;
     sync;
-    respond_long "Started " . pretty_task Task::List::running->[-1];
+    respond_long "Started " . pretty_task Task::List::last;
+}
+
+=head2 pop
+
+Pops a sub-task off the task stack.
+
+  task pop
+  task pop sub-task
+
+=cut
+sub pop {
+    note "pop", shift;
+    sync;
+    respond_long "Stopped " . pretty_task Task::List::last;
 }
 
 =head2 reset

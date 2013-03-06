@@ -18,6 +18,7 @@ use Modern::Perl;
 
 my $tasks   = {};
 my $running = [];
+my $last    = undef;
 
 =head1 METHODS
 
@@ -31,6 +32,19 @@ Reset the list.
 sub reset {
     $tasks = {};
     $running = [];
+    $last = undef;
+}
+
+=head2 last
+
+Last task pushed of popped from the task stack
+
+  Task::List::add("stop");
+  my $stopped = Task::List::last;
+
+=cut
+sub last {
+    return $last;
 }
 
 =head2 new
@@ -55,6 +69,7 @@ sub start {
     my ($task, $time) = @_;
     $task->{start} = $time;
     push @$running, $task;
+    $last = $task;
 }
 
 =head2 stop
@@ -69,7 +84,7 @@ sub stop {
     my $task = pop @$running or return;
     $task->{time} += $time - $task->{start} if $task->{start};
     delete $task->{start};
-    return $task;
+    return $last = $task;
 }
 
 =head2 add
