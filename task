@@ -230,10 +230,12 @@ sub list {
 
 Archive the log so we can start a new one.
 
+  task flush
+
 =cut
 sub flush {
-    try { Task::Log::archive } catch { die "No log to flush\n" };
-    say "Flushed log";
+    try { Task::Log::archive } catch { die "No log to flush" };
+    respond undef, "Flushed log";
 }
 
 =head2 time
