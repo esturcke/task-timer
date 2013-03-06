@@ -119,9 +119,11 @@ sub add {
                 $_->{time} += $time - $_->{start} if $_->{start};
                 delete $_->{start};
             }
+            $last = $running->[-1];
         }
         when ("resume") {
             $_->{start} = $time for @$running;
+            $last = $running->[-1];
         }
         when ("start") {
             stop($time) while @$running;

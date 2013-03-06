@@ -163,6 +163,32 @@ sub pop {
     respond_long "Stopped " . pretty_task Task::List::last;
 }
 
+=head2 pause
+
+Pause tasks
+
+  task pause
+
+=cut
+sub pause {
+    note "pause";
+    sync;
+    respond undef, "Paused " . pretty_task Task::List::last;
+}
+
+=head2 resume
+
+Resume paused tasks
+
+  task resume
+
+=cut
+sub resume {
+    note "resume";
+    sync;
+    respond undef, "Resumed " . pretty_task Task::List::last;
+}
+
 =head2 reset
 
 Reset the timer for a task (and removes all subtasks).
