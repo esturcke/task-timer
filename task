@@ -140,6 +140,20 @@ sub stop {
     respond_long "Stopped " . pretty_task $task;
 }
 
+=head2 push
+
+Pushes a sub-task onto the task stack.
+
+  task push sub-task
+
+=cut
+sub push {
+    my $label = shift or die "No task specified to push";
+    note "push", $label;
+    sync;
+    respond_long "Started " . pretty_task Task::List::running->[-1];
+}
+
 =head2 reset
 
 Reset the timer for a task (and removes all subtasks).
