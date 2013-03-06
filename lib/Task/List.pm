@@ -67,7 +67,7 @@ Stop the top most timer
 sub stop {
     my ($time) = @_;
     my $task = pop @$running or return;
-    $task->{time} += $time - $task->{start};
+    $task->{time} += $time - $task->{start} if $task->{start};
     delete $task->{start};
     return $task;
 }
@@ -80,15 +80,40 @@ Adds an item to the list
 
 =cut
 sub add {
-    my ($command, $label, $time) = @_;
+    my ($time, $command, $label) = @_;
     $time //= time;
     given ($command) {
+        when ("push") {
+            my $task = @$running
+                     ? $running->[-1]{subtasks}{$label} ||= new($label)
+                     : $tasks->{$label}                 ||= new($label);
+            start($task, $time);
+        }
+        when ("pop") {
+            if ($label) {
+                die "No task with label $label running" unless grep { $_->{label} eq $label } @$running;
+                while (@$running && stop($time)->{label} ne $label) {}
+            }
+            else {
+                die "Nothing to pop" unless @$running;
+                stop($time);
+            }
+        }
+        when ("pause") {
+            for (@$running) {
+                $_->{time} += $time - $_->{start} if $_->{start};
+                delete $_->{start};
+            }
+        }
+        when ("resume") {
+            $_->{start} = $time for @$running;
+        }
         when ("start") {
             stop($time) while @$running;
             start($tasks->{$label} ||= new($label), $time);
         }
         when ("stop") {
-            stop($time);
+            stop($time) while @$running;
         }
         when ("reset") {
             $running = [] if @$running && $running->[0]{label} eq $label;

@@ -18,6 +18,9 @@ our @EXPORT = qw/config/;
 use constant OPTIONS     => qw/LOG_DIRECTORY LOG_FILE SHORT/;
 use constant CONFIG_LINE => qr/^\s*(.*?)\s*=\s*(.*?)\s*$/;
 
+# global config options
+my $config;
+
 =head1 METHODS
 
 =head2 config
@@ -28,7 +31,6 @@ Fetches the config hash, reading the config files the first time only.
 
 =cut
 sub config {
-    state $config;
     return $config if $config;
 
     # defaults
@@ -42,6 +44,17 @@ sub config {
     update($config, from_file($_)) for ("/etc/task-timer", "$ENV{HOME}/.task-timer");
     update($config, %ENV);
     return $config;
+}
+
+=head2 reset
+
+Reset the config options.
+
+  Task::Config::reset();
+
+=cut
+sub reset {
+    undef $config;
 }
 
 =head2 update

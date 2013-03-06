@@ -1,14 +1,19 @@
 #!/usr/bin/env perl
 
 use Modern::Perl;
-use FindBin;
 use Pod::Usage;
 use Time::Seconds;
-use Task::Config;
-use Task::Log;
 use Try::Tiny;
+use Data::Dumper;
 
-use constant COMMANDS => [ qw/man help start stop pause resume switch break reset current list flush time summary status/ ];
+use FindBin;
+use lib "$FindBin::RealBin/lib";
+
+use Task::List;
+use Task::Output;
+use Task::Log;
+
+use constant COMMANDS => [ qw/man help start stop push pop pause resume reset current list flush time summary status dump/ ];
 
 =head1 NAME
 
@@ -17,12 +22,12 @@ use constant COMMANDS => [ qw/man help start stop pause resume switch break rese
 =head1 SYNOPSIS
 
   task start bug fix           # start a timer
-  task switch another bug fix  # stop the first and start a new one
+  task start another bug fix   # stop the first and start a new one
   task stop                    # stop the second timer
   task start a third bug fix   # start a third
-  task start part 1            # start a sub-timer without stopping the running timer
-  task stop                    # stop the sub timer
-  task stop                    # stop the third timer
+  task push part 1             # start a sub-timer without stopping the running timer
+  task pop                     # stop the sub timer
+  task pop                     # stop the third timer
 
 =head1 COMMANDS
 
@@ -34,13 +39,13 @@ The general syntax is
 
 where command is one of
 
-  start [label]    - start a timer/sub-timer
-  stop             - stop the current timer/sub-timer
-  stop [label]     - stop sub-timers up to and including the labeled timer
+  start [label]    - stop all timers on the stack and start labeled timer 
+  stop             - stop all timers on the stack
+  push [label]     - start a timer/sub-timer
+  pop              - stop the current timer/sub-timer
+  pop [label]      - stop sub-timers up to and including the labeled timer
   pause            - pause all timers
   resume           - resume paused timers
-  switch [label]   - stop current timers and start labeled timer 
-  break            - stop all timers
   reset [label]    - reset a timer
   current          - list the currently running timer or sub-timer
   list             - list all timers
@@ -65,21 +70,21 @@ The full man page is available via
     $command ~~ COMMANDS ? $command->(@ARGV) : pod2usage( -verbose => 1 );
 }
 
-# read the current log
-sub tasks {
-    my $new = sub { { label => shift, time => 0, subtasks => {} } };
-
-    for (Task::Log::lines) {
-        Task::List::add($_->{command}, $_->{label}, $_->{time});
-    }
-
-    return Task::List::all, Task::List::running;
+# read the log
+sub sync {
+    Task::List::add $_->{time}, $_->{command}, $_->{label} for Task::Log::lines;
 }
 
 # returns pretty format of time
 sub pretty_time {
-    my $time = new Time::Seconds shift @_;
+    my $time = new Time::Seconds shift;
     return $time->pretty;
+}
+
+#returns a pretty format for a task
+sub pretty_task {
+    my $task = shift;
+    return $task->{label} . " (" . pretty_time($task->{time}) . ")";
 }
 
 =head2 man
@@ -114,8 +119,9 @@ Start the timer for a new or existing task.
 =cut
 sub start {
     my ($label) = @_ or die "No task specified to start";
-    say "Starting $label";
     note "start", $label;
+    sync;
+    respond_long "Started " . pretty_task Task::List::running->[0]
 }
 
 =head2 stop
@@ -126,10 +132,12 @@ Stop the timer for the current task or subtask.
 
 =cut
 sub stop {
-    my ($tasks, $running) = tasks();
-    die "No tasks running to stop" unless @$running;
+    sync;
+    die "No tasks running to stop" unless @{&Task::List::running};
     note "stop";
-    say "Stopped" . (@$running > 1 ? " subtask " : " ") . $running->[-1]{label};
+    my $task = Task::List::running->[0];
+    Task::List::add(undef, "stop");
+    respond_long "Stopped " . pretty_task $task;
 }
 
 =head2 reset
@@ -184,6 +192,11 @@ sub flush {
 =cut
 sub time {
     my ($label) = @_;
+}
+
+sub dump {
+    sync;
+    respond undef, Dumper Task::List::all, Task::List::running;
 }
 
 =head1 DESCRIPTION

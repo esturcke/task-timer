@@ -44,6 +44,7 @@ Write to the log.
 sub note {
     open my $log, ">>", file or die "Failed to open log file " . file . ": $!\n";
     say $log scalar localtime . " " . join(" ", @_);    
+    close $log;
 }
 
 =head2 lines
@@ -60,6 +61,7 @@ sub lines {
         my ($time, $command, $label) = $_ =~ LOG_LINE or die "Failed to parse $_ [$.]"; 
         push @lines, { command => $command, label => $label, time => str2time $time };
     }
+    close $log;
     return @lines;
 }
 
