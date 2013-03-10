@@ -212,18 +212,17 @@ List all the tasks.
 
 =cut
 sub list {
-    my ($tasks, $running) = tasks();
-
     my $level;
     $level = sub {
         my ($tasks, $prefix) = @_;
-        for my $label (sort keys %$tasks) {
-            say "$prefix$label\t" . pretty_time $tasks->{$label}{time};
-            &$level($tasks->{$label}{subtasks}, "$prefix\\$label");
+        for my $task (sort { $a->{label} cmp $b->{label} } values %$tasks) {
+            respond_long $prefix . pretty_task $task;
+            &$level($task->{subtasks}, "$prefix\t");
         }
     };
-
-    &$level($tasks, "");
+    sync;
+    Task::List::add(undef, "stop");
+    &$level(Task::List::all, "");
 }
 
 =head2 flush
