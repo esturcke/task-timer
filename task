@@ -118,7 +118,7 @@ Start the timer for a new or existing task.
 
 =cut
 sub start {
-    note "start", shift;
+    note "start", join " ", @_;
     sync;
     respond_long "Started " . pretty_task Task::List::last;
 }
@@ -144,7 +144,7 @@ Pushes a sub-task onto the task stack.
 
 =cut
 sub push {
-    note "push", shift;
+    note "push", join " ", @_;
     sync;
     respond_long "Started " . pretty_task Task::List::last;
 }
@@ -158,7 +158,7 @@ Pops a sub-task off the task stack.
 
 =cut
 sub pop {
-    note "pop", shift;
+    note "pop", join " ", @_;
     sync;
     respond_long "Stopped " . pretty_task Task::List::last;
 }
@@ -197,7 +197,7 @@ Reset the timer for a task (and removes all subtasks).
 
 =cut
 sub reset {
-    my ($label) = @_ or die "No task specified to reset";
+    my $label = join " ", @_ or die "No task specified to reset";
     my ($tasks, $running) = tasks();
     die "No task called $label" unless $tasks->{label};
     note "reset $label";
@@ -241,7 +241,7 @@ sub flush {
 
 =cut
 sub time {
-    my ($label) = @_;
+    my $label = join " ", @_;
 }
 
 sub dump {
